@@ -4,6 +4,8 @@
 Manage the AWS environment that s3pathlib dealing with.
 """
 
+import threading
+
 from typing import Optional
 
 try:
@@ -25,7 +27,9 @@ class Context:
         self.boto_ses: Optional['boto3.session.Session'] = None
         self._aws_region: Optional[str] = None
         self._aws_account_id: Optional[str] = None
+        self._s3_client_lock = threading.Lock()
         self._s3_client = None
+        self._sts_client_lock = threading.Lock()
         self._sts_client = None
 
         # try to create default session
@@ -51,8 +55,9 @@ class Context:
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#client
         """
-        if self._s3_client is None:
-            self._s3_client = self.boto_ses.client("s3")
+        with self._s3_client_lock:
+            if self._s3_client is None:
+                self._s3_client = self.boto_ses.client("s3")
         return self._s3_client
 
     @property
@@ -62,8 +67,9 @@ class Context:
 
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#client
         """
-        if self._sts_client is None:
-            self._sts_client = self.boto_ses.client("sts")
+        with self._s3_client_lock:
+            if self._sts_client is None:
+                self._sts_client = self.boto_ses.client("sts")
         return self._sts_client
 
     @property
